@@ -7,6 +7,7 @@
 #include "ros/ros.h"
 #include "std_msgs/String.h"
 #include <thread>
+#include <unistd.h>
 
 
 class dpu_VO{
@@ -38,17 +39,42 @@ void dpu_VO::callbackThread(void* __this)
   ROS_INFO_STREAM("Callback thread id=" << std::this_thread::get_id());
 
   ros::NodeHandle n;
-  ros::Rate loop_rate(20);
+    int tmp;
+  ros::Rate loop_rate2(50);
+  ros::Publisher dpu_vo_pub = n.advertise<std_msgs::String>("dpu_VO", 3);
+  int running_dpu_NetVLAD;
+  int running_cpu_NetVLAD;
+    // n.param<int>("running_dpu_VO",tmp,0);
+    // n.param<int>("depth_dpu_VO",tmp,0);
+
   while (n.ok())
   {
-    if ( ! _this->frame_queue.empty() ){
-        ROS_INFO_STREAM("Queue deepth: " << _this->frame_queue.size() << " ;WORD: " << _this->frame_queue.front()->data.c_str() );
+    n.param<int>("running_dpu_NetVLAD", running_dpu_NetVLAD, 0);
+    n.param<int>("running_cpu_NetVLAD", running_cpu_NetVLAD, 0);
+    if ( (! _this->frame_queue.empty()) && (! running_dpu_NetVLAD) && running_cpu_NetVLAD ){
+        n.setParam("running_dpu_VO", 1);
+        n.setParam("depth_dpu_VO", int(_this->frame_queue.size() ) );
+        // ROS_INFO_STREAM("Queue deepth: " << _this->frame_queue.size() << " ;WORD: " << _this->frame_queue.front()->data.c_str() );
+        
+        // doing computation
+        usleep(3*1000);
+        
+        std::stringstream ss;
+        std_msgs::String msg;
+        ss << "DPU VO result: [%s]" << _this->frame_queue.front()->data.c_str();
+        msg.data = ss.str();
+        dpu_vo_pub.publish(msg);
+        ros::spinOnce();
         _this->frame_queue.pop();
+        n.setParam("running_dpu_VO", 0);
+        // loop_rate2.sleep();
     }
     else {
+        n.setParam("running_dpu_VO", 0);
+        n.setParam("depth_dpu_VO", 0 );
         ROS_INFO_STREAM("Queue empty");
+        loop_rate2.sleep();
     }
-    loop_rate.sleep();
   }
 }
 
@@ -57,7 +83,7 @@ int main(int argc, char **argv)
     // ROS节点初始化
     ros::init(argc, argv, "dpu_VO");
     dpu_VO dpu_VO_inst;
-    ros::Rate loop_rate(10);
+    ros::Rate loop_rate(50);
     dpu_VO_inst.startdputhread();
     
     while (ros::ok()){

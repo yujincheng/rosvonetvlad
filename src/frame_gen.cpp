@@ -19,7 +19,7 @@ int main(int argc, char **argv)
     ros::Publisher chatter_pub = n.advertise<std_msgs::String>("frame", 3);
 
     // 设置循环的频率
-    ros::Rate loop_rate(3);
+    ros::Rate loop_rate(20);
 
     int count = 0;
     while (ros::ok())
