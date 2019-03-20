@@ -44,6 +44,7 @@ void dpu_VO::callbackThread(void* __this)
   ros::Publisher dpu_vo_pub = n.advertise<std_msgs::String>("dpu_VO", 3);
   int running_dpu_NetVLAD;
   int running_cpu_NetVLAD;
+  int depth_cpu_NetVLAD;
     // n.param<int>("running_dpu_VO",tmp,0);
     // n.param<int>("depth_dpu_VO",tmp,0);
 
@@ -51,23 +52,33 @@ void dpu_VO::callbackThread(void* __this)
   {
     n.param<int>("running_dpu_NetVLAD", running_dpu_NetVLAD, 0);
     n.param<int>("running_cpu_NetVLAD", running_cpu_NetVLAD, 0);
-    if ( (! _this->frame_queue.empty()) && (! running_dpu_NetVLAD) && running_cpu_NetVLAD ){
-        n.setParam("running_dpu_VO", 1);
-        n.setParam("depth_dpu_VO", int(_this->frame_queue.size() ) );
-        // ROS_INFO_STREAM("Queue deepth: " << _this->frame_queue.size() << " ;WORD: " << _this->frame_queue.front()->data.c_str() );
-        
-        // doing computation
-        usleep(3*1000);
-        
-        std::stringstream ss;
-        std_msgs::String msg;
-        ss << "DPU VO result: [%s]" << _this->frame_queue.front()->data.c_str();
-        msg.data = ss.str();
-        dpu_vo_pub.publish(msg);
-        ros::spinOnce();
-        _this->frame_queue.pop();
-        n.setParam("running_dpu_VO", 0);
-        // loop_rate2.sleep();
+    n.param<int>("depth_cpu_NetVLAD",depth_cpu_NetVLAD,0);
+    if ( (! _this->frame_queue.empty())){
+        ROS_INFO_STREAM(" ;running_dpu_NetVLAD: " << running_dpu_NetVLAD << " ;depth_cpu_NetVLAD: " << depth_cpu_NetVLAD << " ;running_cpu_NetVLAD: " << running_cpu_NetVLAD);
+        if ( (! running_dpu_NetVLAD) && ( (depth_cpu_NetVLAD <= 1 && running_cpu_NetVLAD) || (depth_cpu_NetVLAD < 1 && ! running_cpu_NetVLAD) ) ){
+            n.setParam("running_dpu_VO", 1);
+            n.setParam("depth_dpu_VO", int(_this->frame_queue.size() ) );
+            ROS_INFO_STREAM("Queue deepth: " << _this->frame_queue.size() << " ;WORD: " << _this->frame_queue.front()->data.c_str() );
+            
+            // doing computation
+            usleep(3*1000);
+            
+            std::stringstream ss;
+            std_msgs::String msg;
+            ss << "DPU VO result: [%s]" << _this->frame_queue.front()->data.c_str();
+            msg.data = ss.str();
+            dpu_vo_pub.publish(msg);
+            ros::spinOnce();
+            _this->frame_queue.pop();
+            n.setParam("running_dpu_VO", 0);
+            n.setParam("depth_dpu_VO", int(_this->frame_queue.size() ) );
+            // loop_rate2.sleep();
+        }
+        else{
+            ROS_INFO_STREAM("Queue not empty, but not start");
+            n.setParam("depth_dpu_VO", int(_this->frame_queue.size() ) );
+            loop_rate2.sleep();
+        }
     }
     else {
         n.setParam("running_dpu_VO", 0);

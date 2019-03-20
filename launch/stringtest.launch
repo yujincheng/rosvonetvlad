@@ -1,0 +1,22 @@
+<launch>
+    <node name="framegen" pkg="vonetvlad"
+          type="vonetvlad_framegen" 
+          />
+          <!-- output="screen" -->
+
+    <node name="dpuNetVLAD" pkg="vonetvlad"
+          type="vonetvlad_dpuNetVLAD" 
+          />
+
+    <node name="dpuVO" pkg="vonetvlad"
+          type="vonetvlad_dpuVO" 
+          />
+
+    <node name="cpuNetVLAD" pkg="vonetvlad"
+          type="vonetvlad_cpuNetVLAD" 
+          />
+
+    <node name="cpuVO" pkg="vonetvlad"
+          type="vonetvlad_cpuVO" 
+          />
+</launch>

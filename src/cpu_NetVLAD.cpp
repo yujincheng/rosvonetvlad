@@ -37,7 +37,7 @@ void cpu_NetVLAD::cpuNetVLADPub(void* __this)
 {
     cpu_NetVLAD* _this = (cpu_NetVLAD*)  __this;
     ros::NodeHandle n;
-    ros::Publisher cpu_netvlad_pub;
+    ros::Publisher cpu_netvlad_pub = n.advertise<std_msgs::String>("cpu_NetVLAD", 3);;
     ros::Rate loop_rate2(50);
     int tmp;
     // n.param<int>("running_cpu_NetVLAD",tmp,0);
@@ -50,7 +50,7 @@ void cpu_NetVLAD::cpuNetVLADPub(void* __this)
 
             // doing computation
 
-            usleep(324*1000);
+            usleep(360*1000);
             std::stringstream ss;
             std_msgs::String msg_pub;
             ss << "  CPU NetVLAD result: " << _this->dpu_netvlad_queue.front()->data.c_str();

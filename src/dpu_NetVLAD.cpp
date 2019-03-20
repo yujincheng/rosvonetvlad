@@ -15,6 +15,8 @@ public:
     dpu_NetVLAD(){
         dpu_netvald_sub = n.subscribe("frame", 1, &dpu_NetVLAD::callbackThread,this);
         dpu_netvald_pub = n.advertise<std_msgs::String>("dpu_NetVLAD", 3);
+        recent_doing = 0;
+        count_since_last = 0;
     }
     void callbackThread(const std_msgs::String::ConstPtr& msg);
 
@@ -22,6 +24,8 @@ private:
     ros::NodeHandle n;
     ros::Subscriber dpu_netvald_sub;
     ros::Publisher dpu_netvald_pub;
+    int recent_doing;
+    int count_since_last;
 };
 
 void dpu_NetVLAD::callbackThread(const std_msgs::String::ConstPtr& msg)
@@ -37,11 +41,20 @@ void dpu_NetVLAD::callbackThread(const std_msgs::String::ConstPtr& msg)
     n.param<int>("running_dpu_VO", running_dpu_VO, 0);
     n.param<int>("depth_dpu_VO", depth_dpu_VO, 0);
     n.param<int>("depth_cpu_NetVLAD", depth_cpu_NetVLAD, 0);
-
-    if ( (running_dpu_VO > 0) ||  depth_dpu_VO > 1 || depth_cpu_NetVLAD > 1){
+    ROS_INFO_STREAM(" ;depth_cpu_NetVLAD: " << depth_cpu_NetVLAD << " ;depth_dpu_VO: " << depth_dpu_VO << " ;running_dpu_VO: " << running_dpu_VO << " ;recent_doing: " << recent_doing);
+       
+    if ( (running_dpu_VO > 0) ||  depth_dpu_VO > 1 || depth_cpu_NetVLAD > 1 || recent_doing>0){
+        if( recent_doing){
+            count_since_last += 1;
+            if ( depth_cpu_NetVLAD ==0 || count_since_last > 5){
+                recent_doing = 0;
+            }
+        }
         return;
     }
     else{
+        recent_doing = 1;
+        count_since_last = 0;
         n.setParam("running_dpu_NetVLAD", 1);
         ROS_INFO("DPU NetVLAD heard: [%s]", msg->data.c_str());
 
@@ -53,7 +66,7 @@ void dpu_NetVLAD::callbackThread(const std_msgs::String::ConstPtr& msg)
         ss << " DPU NetVLAD result: " << msg->data.c_str();
         msg_pub.data = ss.str();
         dpu_netvald_pub.publish(msg_pub);
-        n.setParam("running_dpu_NetVLAD", 1);
+        n.setParam("running_dpu_NetVLAD", 0);
     }
 }
 
